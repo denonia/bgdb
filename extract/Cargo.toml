@@ -1,0 +1,10 @@
+[package]
+name = "extract"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+itertools = "0.13.0"
+osu-file-parser = "1.1.0"
+rayon = "1.10.0"
+zip = "2.1.3"

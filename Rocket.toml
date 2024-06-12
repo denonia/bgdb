@@ -1,0 +1,11 @@
+[default]
+template_dir = "static/templates"
+
+[default.limits]
+file = "5 MiB"
+form = "5 MiB"
+data-form = "5 MiB"
+
+[release]
+address = "0.0.0.0"
+template_dir = "static/templates"
