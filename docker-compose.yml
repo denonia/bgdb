@@ -2,20 +2,21 @@ version: '3.9'
 
 services:
   postgres:
+    container_name: bgdb_postgres
     restart: always
     image: postgres:14-alpine
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - ~/apps/postgres:/var/lib/postgresql/data
-      - ./img_hashes.sql:/img_hashes.sql
     environment:
       - POSTGRES_PASSWORD=pass
       - POSTGRES_USER=bgdb_user
       - POSTGRES_DB=bgdb_db
     networks:
       - bgdb-network
-  server:
+  web:
+    container_name: bgdb_web
     restart: always
     build: .
     links:
@@ -23,16 +24,17 @@ services:
     networks:
       - bgdb-network
   nginx:
+    container_name: bgdb_nginx
     restart: always
     image: nginx:latest
     volumes:
-      - ./conf/proxy_settings.conf:/etc/nginx/conf.d/proxy_settings.conf
-      - ./conf/default.conf:/etc/nginx/conf.d/default.conf
-      - ./conf/allein.xyz.key:/etc/nginx/cert/allein.xyz.key
-      - ./conf/allein.xyz.pem:/etc/nginx/cert/allein.xyz.pem
+      - ./web/conf/proxy_settings.conf:/etc/nginx/conf.d/proxy_settings.conf
+      - ./web/conf/default.conf:/etc/nginx/conf.d/default.conf
+      - ./web/conf/allein.xyz.key:/etc/nginx/cert/allein.xyz.key
+      - ./web/conf/allein.xyz.pem:/etc/nginx/cert/allein.xyz.pem
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     networks:
       - bgdb-network
 

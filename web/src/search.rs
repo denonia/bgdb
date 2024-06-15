@@ -28,6 +28,9 @@ struct HashDistance {
 #[derive(Serialize)]
 struct ResultModel {
     pub file_name: String,
+    pub artist: String,
+    pub title: String,
+    pub creator: String,
     pub preview_url: String,
     pub similarity: u32,
 }
@@ -56,7 +59,7 @@ pub async fn post_search(
         .await
         .unwrap();
 
-    let results = rows
+    let results: Vec<HashDistance> = rows
         .iter()
         .map(|r| HashRecord {
             file_name: r.get::<String, _>("file_name"),
@@ -66,16 +69,55 @@ pub async fn post_search(
             file_name: j.file_name,
             distance: j.hash.dist(&dest_hash),
         })
-        .sorted_by(|a, b| a.distance.cmp(&b.distance));
+        .sorted_by(|a, b| a.distance.cmp(&b.distance))
+        .take(10)
+        .collect();
+
+    let result_ids = results
+        .iter()
+        .map(|r| r.file_name[..r.file_name.find("_").unwrap()].to_owned())
+        .map(|id| id.parse::<i32>().unwrap())
+        .collect();
+
+    let meta = fetch_meta(result_ids, pool.inner()).await;
 
     let results_top = results
-        .take(10)
-        .map(|r| ResultModel {
+        .iter()
+        .zip(meta)
+        // .map(|r| (r, meta.iter().filter(|m| m.id == r)))
+        .map(|(r, m)| ResultModel {
             file_name: r.file_name[r.file_name.find("_").unwrap() + 1..].to_owned(),
-            preview_url: format!("img/{}", url_escape::encode_fragment(&r.file_name)),
+            artist: m.artist,
+            title: m.title,
+            creator: m.creator,
+            // preview_url: format!("img/{}", url_escape::encode_fragment(&r.file_name)),
+            preview_url: format!("https://assets.ppy.sh/beatmaps/{}/covers/raw.jpg", m.id),
             similarity: ((1.0 - (r.distance as f32 / 100.0)) * 100.0) as u32,
         })
         .collect_vec();
 
     Ok(Template::render("search", context! { results_top }))
+}
+
+struct MapsetMeta {
+    id: i32,
+    artist: String,
+    title: String,
+    creator: String,
+}
+
+async fn fetch_meta(mapset_ids: Vec<i32>, pool: &PgPool) -> Vec<MapsetMeta> {
+    let rows = sqlx::query(
+        "SELECT * FROM mapsets WHERE id = ANY ($1)"
+    )
+        .bind(&mapset_ids[..])
+        .fetch_all(pool)
+        .await.unwrap();
+
+    rows.iter().map(|r| MapsetMeta {
+        id: r.get::<i32, _>("id"),
+        artist: r.get::<String, _>("artist"),
+        title: r.get::<String, _>("title"),
+        creator: r.get::<String, _>("creator"),
+    }).collect()
 }

@@ -11,11 +11,11 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
-RUN cargo build --release --bin server
+RUN cargo build --release --bin web
 
 # We do not need the Rust toolchain to run the binary!
 FROM rust:bookworm AS runtime
 WORKDIR /app
 COPY . .
-COPY --from=builder /app/target/release/server /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/server"]
+COPY --from=builder /app/target/release/web /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/web"]

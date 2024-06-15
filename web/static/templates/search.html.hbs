@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/styles.css" rel="stylesheet"/>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Search results</h1>
+
+    {{#each results_top}}
+        <p>
+            {{this.artist}} - {{this.title}} by {{this.creator}}
+        </p>
+{{!--         <p>{{this.file_name}} - {{this.similarity}}% similarity</p> --}}
+        <p><strong>{{this.similarity}}% similarity</strong></p>
+
+        <img src={{this.preview_url}} width="200"/>
+    {{/each}}
+</div>
+</body>
+
+</html>
