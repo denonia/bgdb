@@ -4,16 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rocket = "0.5.1"
-rocket_dyn_templates = { version = "0.2.0", features = ["handlebars"] }
-serde = "1.0.203"
-url-escape = "0.1.1"
-sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-native-tls"] }
-tokio = { version = "1", features = ["full"] }
-itertools = "0.13.0"
+askama = "0.12.1"
+axum = { version = "0.7.5", features = ["multipart"] }
+tokio = { version = "1.0", features = ["rt-multi-thread"] }
+tokio-util = { version = "0.7.11", features = ["io-util"] }
+futures = "0.3.30"
+diesel = { version = "2.1", features = ["postgres", "uuid", "serde_json"] }
+deadpool-diesel = { version = "0.6.1", features = ["postgres"] }
+dotenv = "0.15.0"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 image_hasher = "2.0.0"
 image = "0.25.1"
-dotenv = "0.15.0"
-
-[build-dependencies]
-syn = "1"
+itertools = "0.13.0"
+tower-http = { version ="0.5.2", features = ["fs"] }

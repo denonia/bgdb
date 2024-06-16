@@ -1,13 +1,27 @@
-use rocket_dyn_templates::{context, Template};
-use sqlx::{PgPool, Row};
+use askama::Template;
+use axum::extract::State;
+use axum::response::IntoResponse;
+use crate::AppState;
+use crate::template::HtmlTemplate;
+use diesel::prelude::*;
+use diesel::row::NamedRow;
+use crate::schema::mapsets::dsl::mapsets;
 
-#[get("/")]
-pub async fn get_index(pool: &rocket::State<PgPool>) -> Template {
-    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM img_hashes")
-        .fetch_one(pool.inner())
-        .await.unwrap();
+pub(crate) async fn index(State(state): State<AppState>) -> impl IntoResponse {
+    let pool = state.pool;
 
-    Template::render("index", context! {
-        total_images: count.0
-    })
+    let mut conn = pool.get().await.unwrap();
+    let count = conn.interact(move |conn| {
+        mapsets.count().get_result::<i64>(conn)
+    }).await.unwrap().unwrap();
+
+    let template = IndexTemplate { total_images: count as i32 };
+    HtmlTemplate(template)
 }
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {
+    total_images: i32,
+}
+

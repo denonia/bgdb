@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/styles.css" rel="stylesheet"/>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Search results</h1>
+
+    {% for result in results %}
+    <a href="{{result.mapset_url}}"><p><strong>{{result.artist}} - {{result.title}}</strong> by {{result.creator}}</p></a>
+    <p><strong>File name:</strong> {{result.file_name}}</p>
+    <p><strong>Distance:</strong> {{result.distance}}</p>
+    <img src="{{result.preview_url}}" width="200"/>
+    {% endfor %}
+</div>
+</body>
+
+</html>

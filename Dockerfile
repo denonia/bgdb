@@ -1,21 +1,9 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
-WORKDIR /app
+FROM rust:1.78.0 as builder
 
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
+WORKDIR /usr/src/app
 
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-# Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json
-# Build application
 COPY . .
+WORKDIR web
 RUN cargo build --release --bin web
 
-# We do not need the Rust toolchain to run the binary!
-FROM rust:bookworm AS runtime
-WORKDIR /app
-COPY . .
-COPY --from=builder /app/target/release/web /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/web"]
+CMD ["cargo", "run", "--release", "--bin", "web"]
