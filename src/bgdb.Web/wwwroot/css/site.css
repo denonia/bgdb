@@ -28,13 +28,13 @@ body {
 }
 
 @media (max-width: 768px) {
-    body {
+    .content-center {
         width: 100%;
     }
 }
 
 @media (max-width: 1250px) {
-    body {
+    .content-center {
         width: 80%;
     }
 }
