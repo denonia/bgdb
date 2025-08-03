@@ -24,3 +24,4 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}
             git pull
             docker compose -f compose.release.yaml up -d --build
+            docker system prune -f
