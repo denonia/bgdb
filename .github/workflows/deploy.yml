@@ -18,6 +18,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
             eval "$(ssh-agent -s)"
             ssh-add ~/.ssh/id_rsa
             cd ${{ secrets.PROJECT_PATH }}
