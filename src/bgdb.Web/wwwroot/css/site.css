@@ -39,7 +39,6 @@ body {
     }
 }
 
-
 a {
     color: var(--link-color);
     text-decoration: none;
@@ -52,6 +51,15 @@ a:visited {
 a:hover {
     color: #DC143C;
     text-decoration: underline;
+}
+
+a.title {
+    color: var(--text-color);
+}
+
+a.title:hover {
+    text-decoration: none;
+    text-shadow: #aaa 1px 0 8px;
 }
 
 .title-row {

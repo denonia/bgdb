@@ -1,5 +1,6 @@
 ﻿@page
 @using System.Globalization
+@using bgdb.Common
 @model IndexModel
 
 @{
@@ -7,7 +8,7 @@
 }
 
 <div class="content-center">
-    <h1>osu! background reverse search</h1>
+    <h1><a class="title" href="@Settings.BaseUrl">osu! background reverse search</a></h1>
     <p>@Model.DatabaseStats.ImageCount images from @Model.DatabaseStats.MapsetCount mapsets, last update @Model.DatabaseStats.LastUpdate.ToString(CultureInfo.InvariantCulture) UTC</p>
 
 
