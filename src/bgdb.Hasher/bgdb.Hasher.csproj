@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Coosu.Beatmap" Version="2.3.41" />
+      <PackageReference Include="LibHeifSharp" Version="3.2.0" />
+      <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.22.1" />
+      <PackageReference Include="Npgsql" Version="9.0.3" />
+      <PackageReference Include="Serilog.Sinks.Console" Version="6.0.1-dev-00953" />
+      <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+      <PackageReference Include="System.Drawing.Common" Version="9.0.7" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\bgdb.Common\bgdb.Common.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,30 @@
+﻿@page
+@using Humanizer
+@model bgdb.Web.Pages.Admin.Index
+
+@{
+}
+
+<h1>Latest searches</h1>
+
+<table>
+    <thead>
+    <tr>
+        <th>Image</th>
+        <th>Search ID</th>
+        <th>IP address</th>
+        <th>Time</th>
+    </tr>
+    </thead>
+    
+    @foreach (var search in Model.LatestSearches)
+    {
+        <tr>
+            <td><img src="@Model.SearchPreviewUrl(search.SearchId.ToString())" /></td>
+            <td><a href="@Model.SearchUrl(search.SearchId.ToString())">@search.SearchId</a></td>
+            <td>@search.IpAddress</td>
+            <td>@search.Timestamp.Humanize()</td>
+        </tr>
+    }
+</table>
+

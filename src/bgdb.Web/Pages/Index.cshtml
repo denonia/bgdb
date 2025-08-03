@@ -1,0 +1,40 @@
+﻿@page
+@using System.Globalization
+@model IndexModel
+
+@{
+    ViewData["Title"] = "Search";
+}
+
+<div class="content-center">
+    <h1>osu! background reverse search</h1>
+    <p>@Model.DatabaseStats.ImageCount images from @Model.DatabaseStats.MapsetCount mapsets, last update @Model.DatabaseStats.LastUpdate.ToString(CultureInfo.InvariantCulture) UTC</p>
+
+
+    @if (Model.SearchPreviewUrl is not null)
+    {
+        <img class="search-img" src="@Model.SearchPreviewUrl" alt="search image"/>
+    }
+
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="ImageFile" accept="image/png, image/jpeg" />
+        <button type="submit">Search</button>
+    </form>
+
+    @if (Model?.Results is not null)
+    {
+        @foreach (var match in Model.Results)
+        {
+            <p class="title-row">
+                <span class="title">
+                    <a class="@(match.IsMatch ? "match" : "")" href="https://osu.ppy.sh/beatmapsets/@match.MapsetId">@match.Artist - @match.Title</a> by @match.Creator
+                </span>
+                <span class="sim" title="similarity score">(@match.Similarity)</span>
+            </p>
+            <a href="https://osu.ppy.sh/beatmapsets/@match.MapsetId">
+                <img src="@match.GetThumbnailUrl(Model.ImageBaseUrl)" 
+                     alt="thumbnail not found"/>
+            </a>
+        }
+    }
+</div>
