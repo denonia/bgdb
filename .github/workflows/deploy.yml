@@ -19,4 +19,4 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PATH }}
             git pull
-            docker-compose -f compose.release.yaml up -d --build
+            docker compose -f compose.release.yaml up -d --build
