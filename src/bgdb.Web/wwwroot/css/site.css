@@ -1,9 +1,15 @@
 * {
     --background-color: #F0F8FF;
+    --text-color: #303030;
+    --link-color: #483D8B;
 }
 
 @media (prefers-color-scheme: dark) {
-    --background-color: #FFF;
+    * {
+        --background-color: #202020;
+        --text-color: #E0E0E0;
+        --link-color: #66B2FF;
+    }
 }
 
 body {
@@ -11,7 +17,7 @@ body {
 
     font-family: Verdana, Helvetica, sans-serif;
     font-size: 14px;
-    color: #303030;
+    color: var(--text-color);
 }
 
 .content-center {
@@ -35,12 +41,12 @@ body {
 
 
 a {
-    color: #483D8B;
+    color: var(--link-color);
     text-decoration: none;
 }
 
 a:visited {
-    color: #483D8B;
+    color: var(--link-color);
 }
 
 a:hover {
