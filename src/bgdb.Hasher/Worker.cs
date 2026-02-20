@@ -28,11 +28,14 @@ public class Worker : IDisposable, IAsyncDisposable
             try
             {
                 await ProcessNewMapsetsAsync();
-                await Task.Delay(TimeSpan.FromMinutes(10), ct);
             }
             catch (Exception e)
             {
                 Log.Error("Failed to get latest mapsets: {exception}", e);
+            }
+            finally
+            {
+                await Task.Delay(TimeSpan.FromMinutes(10), ct);
             }
         }
     }

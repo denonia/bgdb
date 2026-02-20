@@ -101,7 +101,10 @@ public class OszFile : IDisposable, IAsyncDisposable
         await osuStream.CopyToAsync(ms); 
         ms.Seek(0, SeekOrigin.Begin);
 
-        return OsuFile.ReadFromStream(ms);
+        return OsuFile.ReadFromStream(ms, options =>
+        {
+            options.IncludeSections("Metadata", "Events");
+        });
     }
 
     public async Task<IEnumerable<string>> GetBackgroundFileNamesAsync(int mapsetId)
