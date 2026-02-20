@@ -1,6 +1,6 @@
 ﻿using System.Net.Http.Json;
 
-namespace bgdb.Hasher;
+namespace bgdb.Common.Hashing;
 
 public class OsuApiClient : IDisposable
 {

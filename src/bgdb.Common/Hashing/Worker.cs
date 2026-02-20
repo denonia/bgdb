@@ -1,18 +1,17 @@
-﻿using bgdb.Common;
-using bgdb.Common.Models;
+﻿using bgdb.Common.Models;
 using bgdb.Common.Repositories;
 using ImageMagick;
 using Npgsql;
 using Serilog;
 
-namespace bgdb.Hasher;
+namespace bgdb.Common.Hashing;
 
 public class Worker : IDisposable, IAsyncDisposable
 {
-    private readonly ImageAnalyzer _analyzer;
+    private readonly IImageAnalyzer _analyzer;
     private readonly NpgsqlDataSource _dataSource;
 
-    public Worker(ImageAnalyzer analyzer, NpgsqlDataSource dataSource)
+    public Worker(IImageAnalyzer analyzer, NpgsqlDataSource dataSource)
     {
         _analyzer = analyzer;
         _dataSource = dataSource;

@@ -1,10 +1,12 @@
 using bgdb.Common;
+using bgdb.Common.Hashing;
 using bgdb.Common.Repositories;
 using bgdb.Common.Services;
 using bgdb.Web.Middlewares;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.FileProviders;
 using Npgsql;
+using Serilog;
 
 namespace bgdb.Web;
 
@@ -24,6 +26,8 @@ public class Program
         
         var analyzer = new ImageAnalyzer(Settings.ModelPath);
         builder.Services.AddSingleton<IImageAnalyzer>(analyzer);
+        
+        builder.Services.AddSingleton<Worker>();
         
         builder.Services.AddScoped<IDbSession, DbSession>();
         builder.Services.AddTransient<IImageRepository, ImageRepository>();
@@ -45,6 +49,8 @@ public class Program
             opt.Limits.MaxRequestBodySize = 5 * 1024 * 1024;
         });
 
+        builder.Services.AddCors();
+
         var app = builder.Build();
 
         if (!app.Environment.IsDevelopment())
@@ -62,6 +68,8 @@ public class Program
             RequestPath = "/img/raw",
             ServeUnknownFileTypes = true
         });
+        
+        app.UseCors(opt => opt.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
 
         app.UseRouting();
         
@@ -74,6 +82,14 @@ public class Program
             .WithStaticAssets();
 
         app.MapControllers();
+        
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.File(Settings.LogPath, rollingInterval: RollingInterval.Day)
+            .WriteTo.Console()
+            .CreateLogger();
+
+        var worker = app.Services.GetRequiredService<Worker>();
+        Task.Run(async () => await worker.RunAsync());
 
         app.Run();
     }

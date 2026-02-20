@@ -1,4 +1,5 @@
 ﻿using bgdb.Common;
+using bgdb.Common.Hashing;
 using Npgsql;
 using Serilog;
 

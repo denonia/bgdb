@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Coosu.Beatmap" Version="2.5.1" />
       <PackageReference Include="DotNetEnv" Version="3.1.1" />
       <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.7.0" />
       <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.7" />
@@ -15,6 +16,7 @@
       <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.22.1" />
       <PackageReference Include="Npgsql" Version="9.0.3" />
       <PackageReference Include="Pgvector" Version="0.3.2" />
+      <PackageReference Include="Serilog" Version="4.2.0" />
       <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     </ItemGroup>
 </Project>

@@ -3,7 +3,7 @@ using System.Text;
 using Coosu.Beatmap;
 using Serilog;
 
-namespace bgdb.Hasher;
+namespace bgdb.Common.Hashing;
 
 public class BackgroundEntry
 {
