@@ -6,6 +6,9 @@ using bgdb.Web.Middlewares;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.FileProviders;
 using Npgsql;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 
 namespace bgdb.Web;
@@ -43,6 +46,25 @@ public class Program
         builder.Services.AddDataProtection()
             .PersistKeysToFileSystem(new DirectoryInfo(Settings.KeysPath))
             .SetApplicationName("bgdb");
+
+        builder.Services
+            .AddOpenTelemetry()
+            .ConfigureResource(resource =>
+                resource.AddService("bgdb"))
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter();
+            })
+            .WithMetrics(metrics =>
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter();
+            });
 
         builder.WebHost.ConfigureKestrel(opt =>
         {
