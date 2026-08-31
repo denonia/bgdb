@@ -1,8 +1,8 @@
 ﻿using bgdb.Common.Models;
 using bgdb.Common.Repositories;
 using ImageMagick;
+using Microsoft.Extensions.Logging;
 using Npgsql;
-using Serilog;
 
 namespace bgdb.Common.Hashing;
 
@@ -10,11 +10,13 @@ public class Worker : IDisposable, IAsyncDisposable
 {
     private readonly IImageAnalyzer _analyzer;
     private readonly NpgsqlDataSource _dataSource;
+    private readonly ILogger<Worker> _logger;
 
-    public Worker(IImageAnalyzer analyzer, NpgsqlDataSource dataSource)
+    public Worker(IImageAnalyzer analyzer, NpgsqlDataSource dataSource, ILogger<Worker> logger)
     {
         _analyzer = analyzer;
         _dataSource = dataSource;
+        _logger = logger;
     }
 
     public async Task RunAsync(CancellationToken ct = default)
@@ -30,7 +32,7 @@ public class Worker : IDisposable, IAsyncDisposable
             }
             catch (Exception e)
             {
-                Log.Error("Failed to get latest mapsets: {exception}", e);
+                _logger.LogError("Failed to get latest mapsets: {exception}", e);
             }
             finally
             {
@@ -41,7 +43,7 @@ public class Worker : IDisposable, IAsyncDisposable
 
     private async Task ProcessNewMapsetsAsync()
     {
-        Log.Information("Checking for new mapsets...");
+        _logger.LogInformation("Checking for new mapsets...");
         
         await using var conn = new DbSession(_dataSource);
         var imageRepository = new ImageRepository(conn);
@@ -55,7 +57,7 @@ public class Worker : IDisposable, IAsyncDisposable
         var mapsetIds = latestMapsets!.Beatmapsets.Select(s => s.Id).ToList();
         var newMapsets = mapsetIds.Except(completedMapsetIds).ToList();
         
-        Log.Information("{newMapsetCount} new mapsets found!", newMapsets.Count);
+        _logger.LogInformation("{newMapsetCount} new mapsets found!", newMapsets.Count);
 
         foreach (var mapsetId in newMapsets)
             await ProcessRemoteMapsetAsync(mapsetId);
@@ -70,11 +72,11 @@ public class Worker : IDisposable, IAsyncDisposable
         
         var completedMapsetIds = await imageRepository.GetCompletedMapsetsAsync();
         
-        Log.Information("{processedMapsetCount} processed mapsets in database", completedMapsetIds.Count);
+        _logger.LogInformation("{processedMapsetCount} processed mapsets in database", completedMapsetIds.Count);
 
         if (!Directory.Exists(Settings.LocalSongsPath))
         {
-            Log.Warning("Local songs folder not found. Skipping local map processing...");
+            _logger.LogWarning("Local songs folder not found. Skipping local map processing...");
             return;
         }
         
@@ -82,8 +84,8 @@ public class Worker : IDisposable, IAsyncDisposable
         var localMapsetIds = localOszs.Select(o => int.Parse(Path.GetFileNameWithoutExtension(o))).ToList();
         var mapsetsToProcess = localMapsetIds.Except(completedMapsetIds).Order().ToList();
         
-        Log.Information("{localMapsetCount} mapsets found on disk", localMapsetIds.Count);
-        Log.Information("{mapsetsToProcessCount} mapsets left to process", mapsetsToProcess.Count);
+        _logger.LogInformation("{localMapsetCount} mapsets found on disk", localMapsetIds.Count);
+        _logger.LogInformation("{mapsetsToProcessCount} mapsets left to process", mapsetsToProcess.Count);
 
         var parallelOptions = new ParallelOptions
         {
@@ -98,12 +100,12 @@ public class Worker : IDisposable, IAsyncDisposable
             }
             catch (InvalidDataException e)
             {
-                Log.Error("Invalid archive: {mapsetId}. Trying to redownload from mirror...", mapsetId);
+                _logger.LogError("Invalid archive: {mapsetId}. Trying to redownload from mirror...", mapsetId);
                 await ProcessRemoteMapsetAsync(mapsetId);
             }
             catch (Exception e)
             {
-                Log.Error("Error processing mapset {mapsetId}: {exception}", mapsetId, e.ToString());
+                _logger.LogError("Error processing mapset {mapsetId}: {exception}", mapsetId, e.ToString());
             }
         });
     }
@@ -131,7 +133,7 @@ public class Worker : IDisposable, IAsyncDisposable
 
         if (backgrounds.Count == 0)
         {
-            Log.Information("No backgrounds found in {mapsetId}", mapsetId);
+            _logger.LogInformation("No backgrounds found in {mapsetId}", mapsetId);
             return;
         }
 
@@ -146,7 +148,7 @@ public class Worker : IDisposable, IAsyncDisposable
             var imageRecord = new ImageRecord(mapsetId, bg.FileName, vector);
             await imageRepository.InsertImageRecord(imageRecord);
              
-            Log.Information("Processed {mapsetId}: {fileName}", mapsetId, bg.FileName);
+            _logger.LogInformation("Processed {mapsetId}: {fileName}", mapsetId, bg.FileName);
         }
 
         var meta = await oszFile.GetMetadataAsync();
@@ -156,7 +158,7 @@ public class Worker : IDisposable, IAsyncDisposable
 
     private async Task ConvertMissingBackgroundsAsync()
     {
-        Log.Information("Checking for missing backgrounds...");
+        _logger.LogInformation("Checking for missing backgrounds...");
         
         await using var conn = new DbSession(_dataSource);
         var imageRepository = new ImageRepository(conn);
@@ -172,7 +174,7 @@ public class Worker : IDisposable, IAsyncDisposable
             .Distinct()
             .ToList();
         
-        Log.Information("Converting backgrounds for {remainingMapsets} mapsets...", remainingMapsets.Count);
+        _logger.LogInformation("Converting backgrounds for {remainingMapsets} mapsets...", remainingMapsets.Count);
 
         var parallelOptions = new ParallelOptions
         {
@@ -192,20 +194,20 @@ public class Worker : IDisposable, IAsyncDisposable
                 }
                 else
                 {
-                    Log.Information("{mapsetId} not found locally. Downloading from mirror...", mapsetId);
+                    _logger.LogInformation("{mapsetId} not found locally. Downloading from mirror...", mapsetId);
                     await using var oszStream = await GetMirrorOszStreamAsync(mapsetId);
                     await ConvertImageAsync(mapsetId, oszStream);
                 }
             }
             catch (InvalidDataException e)
             {
-                Log.Error("Invalid archive: {mapsetId}. Trying to redownload from mirror...", mapsetId);
+                _logger.LogError("Invalid archive: {mapsetId}. Trying to redownload from mirror...", mapsetId);
                 await using var oszStream = await GetMirrorOszStreamAsync(mapsetId);
                 await ConvertImageAsync(mapsetId, oszStream);
             }
             catch (Exception e)
             {
-                Log.Error("Error converting background for {mapsetId}: {exception}", mapsetId, e.ToString());
+                _logger.LogError("Error converting background for {mapsetId}: {exception}", mapsetId, e.ToString());
             }
         });
     }
@@ -219,7 +221,7 @@ public class Worker : IDisposable, IAsyncDisposable
 
         if (backgrounds.Count == 0)
         {
-            Log.Information("No backgrounds found in {mapsetId}", mapsetId);
+            _logger.LogInformation("No backgrounds found in {mapsetId}", mapsetId);
             return;
         }
 
@@ -232,7 +234,7 @@ public class Worker : IDisposable, IAsyncDisposable
             image.Quality = 75;
             await image.WriteAsync(resultPath);
             
-            Log.Information("Converted background for {mapsetId} ({fileName})", mapsetId, bg.FileName);
+            _logger.LogInformation("Converted background for {mapsetId} ({fileName})", mapsetId, bg.FileName);
         }
     }
 

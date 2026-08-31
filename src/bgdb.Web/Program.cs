@@ -6,10 +6,10 @@ using bgdb.Web.Middlewares;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.FileProviders;
 using Npgsql;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Serilog;
 
 namespace bgdb.Web;
 
@@ -65,6 +65,14 @@ public class Program
                     .AddHttpClientInstrumentation()
                     .AddOtlpExporter();
             });
+        
+        builder.Logging.AddOpenTelemetry(options =>
+        {
+            options.IncludeFormattedMessage = true;
+            options.IncludeScopes = true;
+
+            options.AddOtlpExporter();
+        });
 
         builder.WebHost.ConfigureKestrel(opt =>
         {
@@ -104,11 +112,6 @@ public class Program
             .WithStaticAssets();
 
         app.MapControllers();
-        
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.File(Settings.LogPath, rollingInterval: RollingInterval.Day)
-            .WriteTo.Console()
-            .CreateLogger();
 
         var worker = app.Services.GetRequiredService<Worker>();
         Task.Run(async () => await worker.RunAsync());

@@ -1,7 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Text;
 using Coosu.Beatmap;
-using Serilog;
 
 namespace bgdb.Common.Hashing;
 
@@ -156,7 +155,7 @@ public class OszFile : IDisposable, IAsyncDisposable
                         Array.Exists(imageExtensions,
                             ext => ext.Equals(Path.GetExtension(e.Name), StringComparison.InvariantCultureIgnoreCase))))
                 {
-                    Log.Warning("Background not defined but images found in {mapsetId}", mapsetId);
+                    //Log.Warning("Background not defined but images found in {mapsetId}", mapsetId);
                 }
             }
         }
