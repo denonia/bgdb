@@ -1,7 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bgdb.Hasher", "bgdb.Hasher\bgdb.Hasher.csproj", "{53884A1F-C40E-43B1-A1F6-2030F7EBF619}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9CBB4CAA-B084-4AD5-913F-098B387EC485}"
 	ProjectSection(SolutionItems) = preProject
 		compose.yaml = compose.yaml
@@ -17,10 +15,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{53884A1F-C40E-43B1-A1F6-2030F7EBF619}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{53884A1F-C40E-43B1-A1F6-2030F7EBF619}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{53884A1F-C40E-43B1-A1F6-2030F7EBF619}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{53884A1F-C40E-43B1-A1F6-2030F7EBF619}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CEA76E55-E865-4504-A663-6EC183ADE730}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CEA76E55-E865-4504-A663-6EC183ADE730}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CEA76E55-E865-4504-A663-6EC183ADE730}.Release|Any CPU.ActiveCfg = Release|Any CPU

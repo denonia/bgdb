@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="bgdb.Common/bgdb.Common.csproj" />
+  <Project Path="bgdb.Web/bgdb.Web.csproj" />
+</Solution>
