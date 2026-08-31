@@ -19,7 +19,6 @@
 
     <ItemGroup>
       <PackageReference Include="Humanizer" Version="3.0.10" />
-      <PackageReference Include="Microsoft.AspNetCore.RateLimiting" Version="7.0.0-rc.2.22476.2" />
       <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
       <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
       <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />

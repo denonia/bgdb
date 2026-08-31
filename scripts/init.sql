@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS images
     PRIMARY KEY (mapset_id, filename)
 );
 
+CREATE INDEX IF NOT EXISTS images_embedding_hnsw_idx ON images
+    USING hnsw (embedding vector_cosine_ops);
+
 CREATE TABLE IF NOT EXISTS searches
 (
     search_id UUID PRIMARY KEY,
