@@ -18,10 +18,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Humanizer" Version="3.0.0-beta.96" />
+      <PackageReference Include="Humanizer" Version="3.0.10" />
       <PackageReference Include="Microsoft.AspNetCore.RateLimiting" Version="7.0.0-rc.2.22476.2" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-      <PackageReference Include="Serilog.Sinks.File" Version="8.0.0-dev-02318" />
+      <PackageReference Include="Serilog.Sinks.File" Version="8.0.0-nblumhardt-02322" />
     </ItemGroup>
 
 </Project>
