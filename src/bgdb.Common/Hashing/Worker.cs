@@ -146,14 +146,14 @@ public class Worker : IDisposable, IAsyncDisposable
             var vector = _analyzer.CreateEmbeddingVector(bg.Content);
 
             var imageRecord = new ImageRecord(mapsetId, bg.FileName, vector);
-            await imageRepository.InsertImageRecord(imageRecord);
+            await imageRepository.InsertImageRecordAsync(imageRecord);
              
             _logger.LogInformation("Processed {mapsetId}: {fileName}", mapsetId, bg.FileName);
         }
 
         var meta = await oszFile.GetMetadataAsync();
         var mapset = new Mapset(mapsetId, meta.Artist, meta.Title, meta.Creator);
-        await imageRepository.InsertMapset(mapset);
+        await imageRepository.InsertMapsetAsync(mapset);
     }
 
     private async Task ConvertMissingBackgroundsAsync()

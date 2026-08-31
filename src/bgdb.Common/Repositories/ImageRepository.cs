@@ -61,7 +61,7 @@ public class ImageRepository : IImageRepository
         return result;
     }
         
-    public async Task InsertImageRecord(ImageRecord image)
+    public async Task InsertImageRecordAsync(ImageRecord image)
     {
         await _dbSession.EnsureOpenedAsync();
         var cmd = new NpgsqlCommand("INSERT INTO images (mapset_id, filename, embedding) VALUES (@mapset_id, @filename, @embedding)", _dbSession.Connection);
@@ -71,7 +71,7 @@ public class ImageRepository : IImageRepository
         await cmd.ExecuteNonQueryAsync(); 
     }
 
-    public async Task InsertMapset(Mapset mapset)
+    public async Task InsertMapsetAsync(Mapset mapset)
     {
         await _dbSession.EnsureOpenedAsync();
         var cmd = new NpgsqlCommand("INSERT INTO mapsets (mapset_id, artist, title, creator) VALUES (@mapset_id, @artist, @title, @creator)", _dbSession.Connection);
@@ -82,8 +82,10 @@ public class ImageRepository : IImageRepository
         await cmd.ExecuteNonQueryAsync(); 
     }
 
-    public async Task<IList<MatchResult>> GetClosestMatches(float[] embedding)
+    public async Task<IList<MatchResult>> GetClosestMatchesAsync(float[] embedding)
     {
+        using var activity = Telemetry.ActivitySource.StartActivity();
+        
         var query = """
                     SELECT
                       m.mapset_id,
