@@ -26,6 +26,8 @@ public class ImageSearchService : IImageSearchService
 
     public async Task<Guid> CreateSearchAsync(Stream stream, IPAddress requesterIp)
     {
+        using var activity = Telemetry.ActivitySource.StartActivity();
+        
         var searchId = Guid.NewGuid();
 
         var ms = new MemoryStream();
@@ -45,8 +47,7 @@ public class ImageSearchService : IImageSearchService
 
     private async Task PerformSearchAsync(Guid searchId, Stream stream, IPAddress requesterIp)
     {
-        var sw = new Stopwatch();
-        sw.Start();
+        using var activity = Telemetry.ActivitySource.StartActivity();
 
         stream.Seek(0, SeekOrigin.Begin);
         var embedding = _analyzer.CreateEmbeddingVector(stream);
@@ -54,7 +55,5 @@ public class ImageSearchService : IImageSearchService
 
         await _searchRepository.CreateSearchAsync(searchId, requesterIp);
         await _searchRepository.InsertSearchResultsAsync(searchId, results);
-        _logger.LogInformation("[{searchId}] Embedding and search - {elapsedMs} ms", searchId,
-            sw.ElapsedMilliseconds);
     }
 }

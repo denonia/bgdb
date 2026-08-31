@@ -54,6 +54,7 @@ public class Program
             .WithTracing(tracing =>
             {
                 tracing
+                    .AddSource(Telemetry.SourceName)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddOtlpExporter();

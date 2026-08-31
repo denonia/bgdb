@@ -20,6 +20,8 @@ public class ImageAnalyzer : IImageAnalyzer
 
     public float[] CreateEmbeddingVector(Stream imageStream)
     {
+        using var activity = Telemetry.ActivitySource.StartActivity();
+        
         var inputTensor = PreprocessImage(imageStream, 224, 224);
         var inputs = new List<NamedOnnxValue>
         {
@@ -35,6 +37,8 @@ public class ImageAnalyzer : IImageAnalyzer
 
     private static DenseTensor<float> PreprocessImage(Stream imageStream, int width, int height)
     {
+        using var activity = Telemetry.ActivitySource.StartActivity();
+        
         using var image = Image.Load(imageStream);
         image.Mutate(x => x.Resize(width, height));
         

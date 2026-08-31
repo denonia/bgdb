@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using ImageMagick;
+﻿using ImageMagick;
 using Microsoft.Extensions.Logging;
 
 namespace bgdb.Common.Services;
@@ -15,8 +14,7 @@ public class ImageConversionService : IImageConversionService
 
     public async Task GenerateSearchThumbnailAsync(string searchId, byte[] source)
     {
-        var sw = new Stopwatch();
-        sw.Start();
+        using var activity = Telemetry.ActivitySource.StartActivity();
         
         var image = new MagickImage(source);
         image.Format = MagickFormat.Jxl;
@@ -30,14 +28,11 @@ public class ImageConversionService : IImageConversionService
         using var resultMs = new MemoryStream();
         await image.WriteAsync(resultMs);
         await File.WriteAllBytesAsync(Path.Combine(Settings.SearchPath, $"{searchId}.jxl"), resultMs.GetBuffer());
-        
-        _logger.LogInformation("[{searchId}] Search thumbnail generated - {elapsedMs} ms", searchId, sw.ElapsedMilliseconds);
     }
 
     public async Task ConvertSearchImageAsync(string searchId, byte[] source)
     {
-        var sw = new Stopwatch();
-        sw.Start();
+        using var activity = Telemetry.ActivitySource.StartActivity();
         
         var image = new MagickImage(source);
         image.Format = MagickFormat.Jxl;
@@ -47,6 +42,5 @@ public class ImageConversionService : IImageConversionService
         await image.WriteAsync(resultMs);
         await File.WriteAllBytesAsync(Path.Combine(Settings.SearchPathRaw, $"{searchId}.jxl"),
             resultMs.GetBuffer());
-        _logger.LogInformation("[{searchId}] Full search image converted - {elapsedMs} ms", searchId, sw.ElapsedMilliseconds);
     }
 }
