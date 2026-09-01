@@ -2,25 +2,24 @@
 using bgdb.Common.Repositories;
 using bgdb.Common.Storages;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace bgdb.Common.Hashing;
 
-public class Worker : IDisposable, IAsyncDisposable
+public class Worker
 {
-    private readonly IImageAnalyzer _analyzer;
+    private readonly ImageEmbedder _embedder;
     private readonly ImageStorage _imageStorage;
-    private readonly NpgsqlDataSource _dataSource;
+    private readonly ImageRepository _imageRepository;
     private readonly ILogger<Worker> _logger;
 
-    public Worker(IImageAnalyzer analyzer, 
+    public Worker(ImageEmbedder embedder, 
         ImageStorage imageStorage,
-        NpgsqlDataSource dataSource, 
+        ImageRepository imageRepository,
         ILogger<Worker> logger)
     {
-        _analyzer = analyzer;
+        _embedder = embedder;
         _imageStorage = imageStorage;
-        _dataSource = dataSource;
+        _imageRepository = imageRepository;
         _logger = logger;
     }
 
@@ -51,11 +50,7 @@ public class Worker : IDisposable, IAsyncDisposable
     {
         _logger.LogInformation("Checking for new mapsets...");
         
-        await using var conn = new DbSession(_dataSource);
-        var imageRepository = new ImageRepository(conn);
-        await conn.OpenAsync();
-        await conn.EnsureCreatedAsync();
-        var completedMapsetIds = await imageRepository.GetCompletedMapsetsAsync();
+        var completedMapsetIds = await _imageRepository.GetCompletedMapsetsAsync();
         
         using var apiClient = new OsuApiClient();
         var latestMapsets = await apiClient.GetLatestMapsets();
@@ -71,12 +66,7 @@ public class Worker : IDisposable, IAsyncDisposable
 
     private async Task ProcessLocalMapsAsync()
     {
-        await using var conn = new DbSession(_dataSource);
-        var imageRepository = new ImageRepository(conn);
-        await conn.OpenAsync();
-        await conn.EnsureCreatedAsync();
-        
-        var completedMapsetIds = await imageRepository.GetCompletedMapsetsAsync();
+        var completedMapsetIds = await _imageRepository.GetCompletedMapsetsAsync();
         
         _logger.LogInformation("{processedMapsetCount} processed mapsets in database", completedMapsetIds.Count);
 
@@ -143,35 +133,28 @@ public class Worker : IDisposable, IAsyncDisposable
             return;
         }
 
-        await using var conn = new DbSession(_dataSource);
-        var imageRepository = new ImageRepository(conn);
-        await conn.OpenAsync();
-            
         foreach (var bg in backgrounds)
         {
-            var vector = _analyzer.CreateEmbeddingVector(bg.Content);
+            using var ms = new MemoryStream();
+            await bg.Content.CopyToAsync(ms);
+            var vector = _embedder.CreateEmbeddingVector(ms.GetBuffer());
 
             var imageRecord = new ImageRecord(mapsetId, bg.FileName, vector);
-            await imageRepository.InsertImageRecordAsync(imageRecord);
+            await _imageRepository.InsertImageRecordAsync(imageRecord);
              
             _logger.LogInformation("Processed {mapsetId}: {fileName}", mapsetId, bg.FileName);
         }
 
         var meta = await oszFile.GetMetadataAsync();
         var mapset = new Mapset(mapsetId, meta.Artist, meta.Title, meta.Creator);
-        await imageRepository.InsertMapsetAsync(mapset);
+        await _imageRepository.InsertMapsetAsync(mapset);
     }
 
     private async Task ConvertMissingBackgroundsAsync()
     {
         _logger.LogInformation("Checking for missing backgrounds in storage...");
 
-        await using var conn = new DbSession(_dataSource);
-        var imageRepository = new ImageRepository(conn);
-        await conn.OpenAsync();
-        await conn.EnsureCreatedAsync();
-
-        var mapsetsInDb = await imageRepository.GetCompletedMapsetsAsync();
+        var mapsetsInDb = await _imageRepository.GetCompletedMapsetsAsync();
         var mapsetsInStorage = (await _imageStorage.GetAllBackgroundImages()).Select(x => x.MapsetId);
         var remainingMapsets = mapsetsInDb.Except(mapsetsInStorage).ToArray();
         
@@ -215,12 +198,7 @@ public class Worker : IDisposable, IAsyncDisposable
 
     private async Task GenerateMissingThumbnailsAsync()
     {
-        await using var conn = new DbSession(_dataSource);
-        var imageRepository = new ImageRepository(conn);
-        await conn.OpenAsync();
-        await conn.EnsureCreatedAsync();
-
-        var backgrounds = await imageRepository.GetImageRecordsAsync();
+        var backgrounds = await _imageRepository.GetImageRecordsAsync();
         var mapsetsWithThumbnails = (await _imageStorage.GetAllBackgroundThumbnails()).Select(x => x.MapsetId);
         var backgroundsToProcess = backgrounds
             .Where(x => !mapsetsWithThumbnails.Contains(x.MapsetId))
@@ -264,7 +242,10 @@ public class Worker : IDisposable, IAsyncDisposable
 
         foreach (var bg in backgrounds)
         {
-            await _imageStorage.UploadBackgroundImageAsync(mapsetId, bg.FileName, bg.Content);
+            using var ms = new MemoryStream();
+            await bg.Content.CopyToAsync(ms);
+            
+            await _imageStorage.UploadBackgroundImageAsync(mapsetId, bg.FileName, ms.GetBuffer());
             await _imageStorage.GenerateBackgroundThumbnailAsync(mapsetId, bg.FileName);
             _logger.LogInformation("Uploaded background for {mapsetId} ({fileName})", mapsetId, bg.FileName);
         }
@@ -280,15 +261,5 @@ public class Worker : IDisposable, IAsyncDisposable
         await oszStream.CopyToAsync(ms);
         ms.Seek(0, SeekOrigin.Begin);
         return ms;
-    }
-
-    public void Dispose()
-    {
-        _dataSource.Dispose();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _dataSource.DisposeAsync();
     }
 }

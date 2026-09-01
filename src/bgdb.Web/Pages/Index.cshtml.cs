@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Mime;
 using bgdb.Common;
 using bgdb.Common.Models;
 using bgdb.Common.Repositories;
@@ -10,12 +11,12 @@ namespace bgdb.Web.Pages;
 
 public class IndexModel : PageModel
 {
-    private readonly IStatsService _statsService;
-    private readonly ISearchRepository _searchRepository;
-    private readonly IImageSearchService _imageSearchService;
+    private readonly StatsService _statsService;
+    private readonly SearchRepository _searchRepository;
+    private readonly ImageSearchService _imageSearchService;
 
     public IndexModel(
-        IStatsService statsService, ISearchRepository searchRepository, IImageSearchService imageSearchService)
+        StatsService statsService, SearchRepository searchRepository, ImageSearchService imageSearchService)
     {
         _statsService = statsService;
         _searchRepository = searchRepository;
@@ -46,10 +47,12 @@ public class IndexModel : PageModel
         if (ImageFile == null || ImageFile.Length == 0)
             return BadRequest();
 
-        await using var imageStream = ImageFile.OpenReadStream();
+        using var ms = new MemoryStream();
+        await ImageFile.CopyToAsync(ms);
+        var imageBytes = ms.ToArray();
         
         var searchId = await _imageSearchService.CreateSearchAsync(
-            imageStream, ImageFile.FileName, GetRemoteIpAddress());
+            imageBytes, ImageFile.FileName, GetRemoteIpAddress());
 
         return RedirectToPage(null, null, new { searchid = searchId });
     }

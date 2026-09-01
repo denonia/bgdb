@@ -4,23 +4,22 @@ using Pgvector;
 
 namespace bgdb.Common.Repositories;
 
-public class ImageRepository : IImageRepository
+public class ImageRepository
 {
-    private readonly IDbSession _dbSession;
+    private readonly NpgsqlDataSource _dataSource;
 
-    public ImageRepository(IDbSession dbSession)
+    public ImageRepository(NpgsqlDataSource dataSource)
     {
-        _dbSession = dbSession;
+        _dataSource = dataSource;
     }
 
     public async Task<IList<int>> GetCompletedMapsetsAsync()
     {
-        await _dbSession.EnsureOpenedAsync();
-        await using var cmd = new NpgsqlCommand("SELECT DISTINCT mapset_id FROM images", _dbSession.Connection);
+        await using var command = _dataSource.CreateCommand("SELECT DISTINCT mapset_id FROM images");
 
         var result = new List<int>();
 
-        await using var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             result.Add(reader.GetInt32(0));
@@ -31,12 +30,11 @@ public class ImageRepository : IImageRepository
 
     public async Task<IList<ImageRecord>> GetImageRecordsAsync()
     {
-        await _dbSession.EnsureOpenedAsync();
-        await using var cmd = new NpgsqlCommand("SELECT mapset_id, filename FROM images", _dbSession.Connection);
+        await using var command = _dataSource.CreateCommand("SELECT mapset_id, filename FROM images");
 
         var result = new List<ImageRecord>();
 
-        await using var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync();
         
         // TODO: we don't need to load embeddings every time
         while (await reader.ReadAsync())
@@ -47,13 +45,13 @@ public class ImageRepository : IImageRepository
 
     public async Task<IList<string>> GetMapsetImageFileNamesAsync(int mapsetId)
     {
-        await _dbSession.EnsureOpenedAsync();
-        await using var cmd = new NpgsqlCommand("SELECT filename FROM images WHERE mapset_id = @mapset_id", _dbSession.Connection);
-        cmd.Parameters.AddWithValue("mapset_id", mapsetId);
+        await using var command = _dataSource.CreateCommand(
+            "SELECT filename FROM images WHERE mapset_id = @mapset_id");
+        command.Parameters.AddWithValue("mapset_id", mapsetId);
 
         var result = new List<string>();
 
-        await using var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync();
         
         while (await reader.ReadAsync())
             result.Add(reader.GetString(0));
@@ -63,50 +61,48 @@ public class ImageRepository : IImageRepository
         
     public async Task InsertImageRecordAsync(ImageRecord image)
     {
-        await _dbSession.EnsureOpenedAsync();
-        var cmd = new NpgsqlCommand("INSERT INTO images (mapset_id, filename, embedding) VALUES (@mapset_id, @filename, @embedding)", _dbSession.Connection);
-        cmd.Parameters.AddWithValue("mapset_id", image.MapsetId);
-        cmd.Parameters.AddWithValue("filename", image.FileName);
-        cmd.Parameters.AddWithValue("embedding", new Vector(image.Embedding));
-        await cmd.ExecuteNonQueryAsync(); 
+        await using var command = _dataSource.CreateCommand(
+            "INSERT INTO images (mapset_id, filename, embedding) VALUES (@mapset_id, @filename, @embedding)");
+        command.Parameters.AddWithValue("mapset_id", image.MapsetId);
+        command.Parameters.AddWithValue("filename", image.FileName);
+        command.Parameters.AddWithValue("embedding", new Vector(image.Embedding));
+        await command.ExecuteNonQueryAsync(); 
     }
 
     public async Task InsertMapsetAsync(Mapset mapset)
     {
-        await _dbSession.EnsureOpenedAsync();
-        var cmd = new NpgsqlCommand("INSERT INTO mapsets (mapset_id, artist, title, creator) VALUES (@mapset_id, @artist, @title, @creator)", _dbSession.Connection);
-        cmd.Parameters.AddWithValue("mapset_id", mapset.MapsetId);
-        cmd.Parameters.AddWithValue("artist", mapset.Artist);
-        cmd.Parameters.AddWithValue("title", mapset.Title);
-        cmd.Parameters.AddWithValue("creator", mapset.Creator);
-        await cmd.ExecuteNonQueryAsync(); 
+        await using var command = _dataSource.CreateCommand(
+            "INSERT INTO mapsets (mapset_id, artist, title, creator) VALUES (@mapset_id, @artist, @title, @creator)");
+        command.Parameters.AddWithValue("mapset_id", mapset.MapsetId);
+        command.Parameters.AddWithValue("artist", mapset.Artist);
+        command.Parameters.AddWithValue("title", mapset.Title);
+        command.Parameters.AddWithValue("creator", mapset.Creator);
+        await command.ExecuteNonQueryAsync(); 
     }
 
     public async Task<IList<MatchResult>> GetClosestMatchesAsync(float[] embedding)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
-        
-        var query = """
-                    SELECT
-                      m.mapset_id,
-                      m.artist,
-                      m.title,
-                      m.creator,
-                      i.filename,
-                      1 - (i.embedding <=> @embedding) AS similarity
-                    FROM images i
-                    JOIN mapsets m on i.mapset_id = m.mapset_id
-                    ORDER BY i.embedding <=> @embedding
-                    LIMIT 20;
-                    """;
-        
-        await _dbSession.EnsureOpenedAsync();
-        await using var cmd = new NpgsqlCommand(query, _dbSession.Connection);
-        cmd.Parameters.AddWithValue("embedding", new Vector(embedding));
+
+        await using var command = _dataSource.CreateCommand(
+            """
+            SELECT
+              m.mapset_id,
+              m.artist,
+              m.title,
+              m.creator,
+              i.filename,
+              1 - (i.embedding <=> @embedding) AS similarity
+            FROM images i
+            JOIN mapsets m on i.mapset_id = m.mapset_id
+            ORDER BY i.embedding <=> @embedding
+            LIMIT 20;
+            """);
+        command.Parameters.AddWithValue("embedding", new Vector(embedding));
         
         var result = new List<MatchResult>();
         
-        await using var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             var match = new MatchResult

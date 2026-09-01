@@ -34,17 +34,16 @@ public class ImageStorage
     private string GetSearchThumbnailKey(Guid searchId) 
          => $"{SearchThumbnailPrefix}{searchId}.avif";
     
-    public async Task UploadBackgroundImageAsync(int mapsetId, string fileName, Stream stream)
+    public async Task UploadBackgroundImageAsync(int mapsetId, string fileName, byte[] content)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
         
-        var image = new MagickImage(stream);
+        using var image = new MagickImage(content);
         image.Format = MagickFormat.Jxl;
         image.Quality = 75;
             
-        using var ms = new MemoryStream(image.ToByteArray());
         var key = GetBackgroundImageKey(mapsetId, fileName);
-        await _fileStorage.PutFileAsync(key, BackgroundImageContentType, ms);
+        await _fileStorage.PutFileAsync(key, BackgroundImageContentType, image.ToByteArray());
     }
 
     public async Task<IReadOnlyCollection<StorageImage>> GetAllBackgroundImages()
@@ -91,11 +90,8 @@ public class ImageStorage
             IgnoreAspectRatio = false
         });
         
-        var imageBytes = magickImage.ToByteArray();
-        using var ms = new MemoryStream(imageBytes);
-        
         var key = GetBackgroundThumbnailKey(mapsetId, fileName);
-        await _fileStorage.PutFileAsync(key, BackgroundThumbnailContentType, ms);
+        await _fileStorage.PutFileAsync(key, BackgroundThumbnailContentType, magickImage.ToByteArray());
     }
 
     public async Task<StorageFile?> GetBackgroundThumbnailAsync(int mapsetId, string fileName)
@@ -122,10 +118,9 @@ public class ImageStorage
         });
         
         var imageBytes = magickImage.ToByteArray();
-        using var ms = new MemoryStream(imageBytes);
-        await _fileStorage.PutFileAsync(key, BackgroundThumbnailContentType, ms);
+        await _fileStorage.PutFileAsync(key, BackgroundThumbnailContentType, imageBytes);
         
-        return new StorageFile(new MemoryStream(imageBytes), BackgroundThumbnailContentType);
+        return new StorageFile(imageBytes, BackgroundThumbnailContentType);
     }
     
     public async Task<IReadOnlyCollection<StorageImage>> GetAllBackgroundThumbnails()
@@ -145,21 +140,20 @@ public class ImageStorage
             .ToArray();
     }
 
-
-    public async Task UploadSearchImageAsync(Guid searchId, string fileName, Stream stream)
+    public async Task UploadSearchImageAsync(Guid searchId, string fileName, byte[] content)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
         
         var key = GetSearchImageKey(searchId, fileName);
         var contentType = MimeTypeMap.GetMimeType(fileName);
-        await _fileStorage.PutFileAsync(key, contentType, stream);
+        await _fileStorage.PutFileAsync(key, contentType, content);
     }
 
-    public async Task GenerateSearchThumbnailAsync(Guid searchId, Stream stream)
+    public async Task GenerateSearchThumbnailAsync(Guid searchId, byte[] content)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
         
-        var image = new MagickImage(stream);
+        using var image = new MagickImage(content);
         image.Format = MagickFormat.Avif;
         image.Quality = 65;
                 
@@ -167,13 +161,9 @@ public class ImageStorage
         {
             IgnoreAspectRatio = false
         });
-                
-        using var ms = new MemoryStream();
-        await image.WriteAsync(ms);
-        ms.Seek(0, SeekOrigin.Begin);
         
         var key = GetSearchThumbnailKey(searchId);
-        await _fileStorage.PutFileAsync(key, SearchThumbnailContentType, ms);
+        await _fileStorage.PutFileAsync(key, SearchThumbnailContentType, image.ToByteArray());
     }
 
     public async Task<StorageFile?> GetSearchThumbnailAsync(Guid searchId)
@@ -181,10 +171,10 @@ public class ImageStorage
         using var activity = Telemetry.ActivitySource.StartActivity();
         
         var key = GetSearchThumbnailKey(searchId);
-        var imageStream = await _fileStorage.GetFileAsync(key);
-        if (imageStream is null)
+        var imageBytes = await _fileStorage.GetFileAsync(key);
+        if (imageBytes is null)
             return null;
         
-        return new StorageFile(imageStream, SearchThumbnailContentType);
+        return new StorageFile(imageBytes, SearchThumbnailContentType);
     }
 }

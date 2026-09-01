@@ -4,22 +4,25 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 
 namespace bgdb.Common;
 
-public class ImageAnalyzer : IImageAnalyzer
+public class ImageEmbedder
 {
     private readonly InferenceSession _session;
 
-    public ImageAnalyzer(string modelPath)
+    public ImageEmbedder(string modelPath)
     {
-        _session = new InferenceSession(modelPath);
+        var options = new SessionOptions
+        {
+            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
+        };
+        
+        _session = new InferenceSession(modelPath, options);
     }
 
-    public IEnumerable<string> MetadataKeys => _session.InputMetadata.Select(m => m.Key);
-
-    public float[] CreateEmbeddingVector(Stream imageStream)
+    public float[] CreateEmbeddingVector(ReadOnlySpan<byte> imageBytes)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
         
-        var inputTensor = PreprocessImage(imageStream, 224, 224);
+        var inputTensor = PreprocessImage(imageBytes, 224, 224);
         var inputs = new List<NamedOnnxValue>
         {
             NamedOnnxValue.CreateFromTensor("pixel_values", inputTensor)
@@ -34,7 +37,7 @@ public class ImageAnalyzer : IImageAnalyzer
         return output;
     }
 
-    private static DenseTensor<float> PreprocessImage(Stream imageStream, int width, int height)
+    private static DenseTensor<float> PreprocessImage(ReadOnlySpan<byte> imageBytes, int width, int height)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
 
@@ -43,7 +46,7 @@ public class ImageAnalyzer : IImageAnalyzer
         magickReadSettings.SetDefine(MagickFormat.Png, "ignore-crc", true);
         magickReadSettings.SetDefine(MagickFormat.Jpeg, "size", $"{width}x{height}");
 
-        using var image = new MagickImage(imageStream, magickReadSettings);
+        using var image = new MagickImage(imageBytes, magickReadSettings);
         
         if (image.HasAlpha)
             image.Alpha(AlphaOption.Off);

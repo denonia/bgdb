@@ -4,28 +4,27 @@ using Npgsql;
 
 namespace bgdb.Common.Repositories;
 
-public class SearchRepository : ISearchRepository
+public class SearchRepository
 {
-    private readonly IDbSession _dbSession;
+    private readonly NpgsqlDataSource _dataSource;
 
-    public SearchRepository(IDbSession dbSession)
+    public SearchRepository(NpgsqlDataSource dataSource)
     {
-        _dbSession = dbSession;
+        _dataSource = dataSource;
     }
 
     public async Task CreateSearchAsync(Guid searchId, IPAddress ipAddress)
     {
-        await _dbSession.EnsureOpenedAsync();
-        var cmd = new NpgsqlCommand("INSERT INTO searches (search_id, ip_addr) VALUES (@search_id, @ip_addr)", _dbSession.Connection);
-        cmd.Parameters.AddWithValue("search_id", searchId);
-        cmd.Parameters.AddWithValue("ip_addr", ipAddress);
-        await cmd.ExecuteNonQueryAsync(); 
+        await using var command = _dataSource.CreateCommand(
+            "INSERT INTO searches (search_id, ip_addr) VALUES (@search_id, @ip_addr)");
+        command.Parameters.AddWithValue("search_id", searchId);
+        command.Parameters.AddWithValue("ip_addr", ipAddress);
+        await command.ExecuteNonQueryAsync(); 
     }
 
     public async Task InsertSearchResultsAsync(Guid searchId, IList<MatchResult> results)
     {
-        await _dbSession.EnsureOpenedAsync();
-        var batch = new NpgsqlBatch(_dbSession.Connection);
+        await using var batch = _dataSource.CreateBatch();
 
         foreach (var result in results)
         {
@@ -63,13 +62,12 @@ public class SearchRepository : ISearchRepository
                     LIMIT 20;
                     """;
         
-        await _dbSession.EnsureOpenedAsync();
-        await using var cmd = new NpgsqlCommand(query, _dbSession.Connection);
-        cmd.Parameters.AddWithValue("search_id", searchId);
+        await using var command = _dataSource.CreateCommand(query);
+        command.Parameters.AddWithValue("search_id", searchId);
         
         var result = new List<MatchResult>();
         
-        await using var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             var match = new MatchResult
@@ -89,12 +87,12 @@ public class SearchRepository : ISearchRepository
 
     public async Task<IList<SearchRecord>> GetLatestSearches()
     {
-        await _dbSession.EnsureOpenedAsync();
-        await using var cmd = new NpgsqlCommand("SELECT * FROM searches ORDER BY timestamp DESC LIMIT 100", _dbSession.Connection);
+        await using var command = _dataSource.CreateCommand(
+            "SELECT * FROM searches ORDER BY timestamp DESC LIMIT 100");
         
         var result = new List<SearchRecord>();
         
-        await using var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             var search = new SearchRecord

@@ -4,17 +4,17 @@ using Npgsql;
 
 namespace bgdb.Common.Services;
 
-public class StatsService : IStatsService
+public class StatsService
 {
     private const string StatsCacheKey = "database-stats";
     private readonly TimeSpan _statsCacheDuration = TimeSpan.FromMinutes(1);
-    
-    private readonly IDbSession _dbSession;
+
+    private readonly NpgsqlDataSource _dataSource;
     private readonly IMemoryCache _memoryCache;
 
-    public StatsService(IDbSession dbSession, IMemoryCache memoryCache)
+    public StatsService(NpgsqlDataSource dataSource, IMemoryCache memoryCache)
     {
-        _dbSession = dbSession;
+        _dataSource = dataSource;
         _memoryCache = memoryCache;
     }
 
@@ -22,17 +22,15 @@ public class StatsService : IStatsService
     {
         if (!_memoryCache.TryGetValue(StatsCacheKey, out DatabaseStats? databaseStats))
         {
-            await _dbSession.EnsureOpenedAsync();
-        
             var query = """
                         SELECT 
                             (SELECT COUNT(*) FROM images) AS image_count,
                             (SELECT COUNT(*) FROM mapsets) AS mapset_count,
                             (SELECT MAX(processed_at) FROM images) AS last_update;
                         """;
-            await using var cmd = new NpgsqlCommand(query, _dbSession.Connection);
+            await using var command = _dataSource.CreateCommand(query);
         
-            await using var reader = await cmd.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
             await reader.ReadAsync();
 
             databaseStats = new DatabaseStats

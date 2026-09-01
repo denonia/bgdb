@@ -29,8 +29,8 @@ public class Program
         var dataSource = dataSourceBuilder.Build();
         builder.Services.AddSingleton(dataSource);
         
-        var analyzer = new ImageAnalyzer(Settings.ModelPath);
-        builder.Services.AddSingleton<IImageAnalyzer>(analyzer);
+        var analyzer = new ImageEmbedder(Settings.ModelPath);
+        builder.Services.AddSingleton(analyzer);
         
         builder.Services.AddSingleton<Worker>();
         
@@ -45,25 +45,25 @@ public class Program
 
                 var config = new AmazonS3Config
                 {
-                    ServiceURL = Settings.S3ServiceUrl
+                    ServiceURL = Settings.S3ServiceUrl,
+                    ForcePathStyle = true
                 };
 
                 return new AmazonS3Client(credentials, config);
             });
         
-            builder.Services.AddTransient<IFileStorage, S3FileStorage>();
+            builder.Services.AddSingleton<IFileStorage, S3FileStorage>();
         }
         else if (storageKind == StorageKind.Files)
-            builder.Services.AddTransient<IFileStorage, FileStorage>();
+            builder.Services.AddSingleton<IFileStorage, FileStorage>();
         
-        builder.Services.AddTransient<ImageStorage>();
+        builder.Services.AddSingleton<ImageStorage>();
         
-        builder.Services.AddScoped<IDbSession, DbSession>();
-        builder.Services.AddTransient<IImageRepository, ImageRepository>();
-        builder.Services.AddTransient<ISearchRepository, SearchRepository>();
+        builder.Services.AddSingleton<ImageRepository>();
+        builder.Services.AddSingleton<SearchRepository>();
         
-        builder.Services.AddTransient<IImageSearchService, ImageSearchService>();
-        builder.Services.AddTransient<IStatsService, StatsService>();
+        builder.Services.AddSingleton<ImageSearchService>();
+        builder.Services.AddSingleton<StatsService>();
         
         builder.Services.AddRateLimiter();
         builder.Services.AddResponseCaching();
@@ -117,7 +117,6 @@ public class Program
         app.UseExceptionHandler("/Error");
         app.UseHttpsRedirection();
         app.UseResponseCaching();
-
 
         app.UseRouting();
         

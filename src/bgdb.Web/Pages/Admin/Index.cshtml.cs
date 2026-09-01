@@ -7,9 +7,9 @@ namespace bgdb.Web.Pages.Admin;
 
 public class Index : PageModel
 {
-    private readonly ISearchRepository _searchRepository;
+    private readonly SearchRepository _searchRepository;
 
-    public Index(ISearchRepository searchRepository)
+    public Index(SearchRepository searchRepository)
     {
         _searchRepository = searchRepository;
     }

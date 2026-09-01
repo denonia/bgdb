@@ -9,7 +9,7 @@ public class FileStorage : IFileStorage
         _storagePath = Settings.StoragePath;
     }
     
-    public async Task PutFileAsync(string key, string contentType, Stream content)
+    public async Task PutFileAsync(string key, string contentType, byte[] content)
     {
         var path = Path.Combine(_storagePath, key);
         
@@ -17,8 +17,7 @@ public class FileStorage : IFileStorage
         if (directory != null)
             Directory.CreateDirectory(directory);
         
-        await using var fs = File.OpenWrite(path);
-        await content.CopyToAsync(fs);
+        await File.WriteAllBytesAsync(path, content);
     }
 
     public async Task<IReadOnlyCollection<string>> ListFilesAsync(string prefix)
@@ -29,13 +28,13 @@ public class FileStorage : IFileStorage
             .ToArray();
     }
 
-    public async Task<Stream?> GetFileAsync(string key)
+    public async Task<byte[]?> GetFileAsync(string key)
     {
         var path = Path.Combine(_storagePath, key);
 
         if (!File.Exists(path))
             return null;
 
-        return File.OpenRead(path);
+        return await File.ReadAllBytesAsync(path);
     }
 }
