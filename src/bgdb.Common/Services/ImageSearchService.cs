@@ -27,10 +27,16 @@ public class ImageSearchService : IImageSearchService
         using var activity = Telemetry.ActivitySource.StartActivity();
         
         var searchId = Guid.NewGuid();
+        
+        using var genStream = new MemoryStream();
+        await stream.CopyToAsync(genStream);
+        genStream.Seek(0, SeekOrigin.Begin);
+        
+        using var uploadStream = new MemoryStream(genStream.ToArray());
 
         await Task.WhenAll(
-            _imageStorage.GenerateSearchThumbnailAsync(searchId, stream),
-            _imageStorage.UploadSearchImageAsync(searchId, fileName, stream),
+            _imageStorage.GenerateSearchThumbnailAsync(searchId, genStream),
+            _imageStorage.UploadSearchImageAsync(searchId, fileName, uploadStream),
             PerformSearchAsync(searchId, stream, requesterIp));
 
         return searchId;

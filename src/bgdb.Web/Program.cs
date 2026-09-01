@@ -34,21 +34,28 @@ public class Program
         
         builder.Services.AddSingleton<Worker>();
         
-        builder.Services.AddSingleton<IAmazonS3>(sp =>
+        var storageKind = Enum.Parse<StorageKind>(Settings.StorageKind);
+        if (storageKind == StorageKind.S3)
         {
-            var credentials = new BasicAWSCredentials(
-                Settings.S3AccessKey,
-                Settings.S3SecretKey);
-
-            var config = new AmazonS3Config
+            builder.Services.AddSingleton<IAmazonS3>(_ =>
             {
-                ServiceURL = Settings.S3ServiceUrl
-            };
+                var credentials = new BasicAWSCredentials(
+                    Settings.S3AccessKey,
+                    Settings.S3SecretKey);
 
-            return new AmazonS3Client(credentials, config);
-        });
+                var config = new AmazonS3Config
+                {
+                    ServiceURL = Settings.S3ServiceUrl
+                };
+
+                return new AmazonS3Client(credentials, config);
+            });
         
-        builder.Services.AddTransient<IFileStorage, S3FileStorage>();
+            builder.Services.AddTransient<IFileStorage, S3FileStorage>();
+        }
+        else if (storageKind == StorageKind.Files)
+            builder.Services.AddTransient<IFileStorage, FileStorage>();
+        
         builder.Services.AddTransient<ImageStorage>();
         
         builder.Services.AddScoped<IDbSession, DbSession>();
