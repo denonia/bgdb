@@ -24,7 +24,9 @@ public class FileStorage : IFileStorage
     public async Task<IReadOnlyCollection<string>> ListFilesAsync(string prefix)
     {
         var directory = Path.Combine(_storagePath, prefix);
-        return Directory.GetFiles(directory);
+        return Directory.GetFiles(directory, "*.*", SearchOption.AllDirectories)
+            .Select(dir => dir[(_storagePath.Length + 1)..])
+            .ToArray();
     }
 
     public async Task<Stream?> GetFileAsync(string key)
