@@ -26,8 +26,9 @@ public class Worker : IDisposable, IAsyncDisposable
 
     public async Task RunAsync(CancellationToken ct = default)
     {
-        await ProcessLocalMapsAsync();
+        //await ProcessLocalMapsAsync();
         //await ConvertMissingBackgroundsAsync();
+        //await GenerateMissingThumbnailsAsync();
 
         while (!ct.IsCancellationRequested)
         {
@@ -212,6 +213,42 @@ public class Worker : IDisposable, IAsyncDisposable
         });
     }
 
+    private async Task GenerateMissingThumbnailsAsync()
+    {
+        await using var conn = new DbSession(_dataSource);
+        var imageRepository = new ImageRepository(conn);
+        await conn.OpenAsync();
+        await conn.EnsureCreatedAsync();
+
+        var backgrounds = await imageRepository.GetImageRecordsAsync();
+        var mapsetsWithThumbnails = (await _imageStorage.GetAllBackgroundThumbnails()).Select(x => x.MapsetId);
+        var backgroundsToProcess = backgrounds
+            .Where(x => !mapsetsWithThumbnails.Contains(x.MapsetId))
+            .ToArray();
+        
+        _logger.LogInformation("Generating thumbnails for {remainingMapsets} mapsets...", backgroundsToProcess.Length);
+        
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 8
+        };
+
+        await Parallel.ForEachAsync(backgroundsToProcess, parallelOptions, async (bg, token) =>
+        {
+            try
+            {
+                await _imageStorage.GenerateBackgroundThumbnailAsync(bg.MapsetId, bg.FileName);
+                _logger.LogInformation("Generated thumbnail for {fileName} ({mapsetId})", 
+                    bg.FileName, bg.MapsetId);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error generating thumbnail for {fileName} ({mapsetId}): {exception}", 
+                    bg.FileName, bg.MapsetId, e.ToString());
+            }
+        });
+    }
+
     private async Task ConvertImageAsync(int mapsetId, Stream oszStream)
     {
         oszStream.Seek(0, SeekOrigin.Begin);
@@ -228,6 +265,7 @@ public class Worker : IDisposable, IAsyncDisposable
         foreach (var bg in backgrounds)
         {
             await _imageStorage.UploadBackgroundImageAsync(mapsetId, bg.FileName, bg.Content);
+            await _imageStorage.GenerateBackgroundThumbnailAsync(mapsetId, bg.FileName);
             _logger.LogInformation("Uploaded background for {mapsetId} ({fileName})", mapsetId, bg.FileName);
         }
     }

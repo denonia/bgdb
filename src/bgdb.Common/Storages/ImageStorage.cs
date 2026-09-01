@@ -40,6 +40,7 @@ public class ImageStorage
         
         var image = new MagickImage(stream);
         image.Format = MagickFormat.Jxl;
+        image.Quality = 75;
             
         using var ms = new MemoryStream(image.ToByteArray());
         var key = GetBackgroundImageKey(mapsetId, fileName);
@@ -75,6 +76,28 @@ public class ImageStorage
         return new StorageFile(content, BackgroundImageContentType);
     }
 
+    public async Task GenerateBackgroundThumbnailAsync(int mapsetId, string fileName)
+    {
+        var sourceImage = await GetBackgroundImageAsync(mapsetId, fileName);
+        if (sourceImage is null)
+            return;
+        
+        using var magickImage = new MagickImage(sourceImage.Content);
+        magickImage.Format = MagickFormat.Avif;
+        magickImage.Quality = 65;
+        
+        magickImage.Resize(new MagickGeometry(320, 320)
+        {
+            IgnoreAspectRatio = false
+        });
+        
+        var imageBytes = magickImage.ToByteArray();
+        using var ms = new MemoryStream(imageBytes);
+        
+        var key = GetBackgroundThumbnailKey(mapsetId, fileName);
+        await _fileStorage.PutFileAsync(key, BackgroundThumbnailContentType, ms);
+    }
+
     public async Task<StorageFile?> GetBackgroundThumbnailAsync(int mapsetId, string fileName)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
@@ -91,6 +114,7 @@ public class ImageStorage
         
         using var magickImage = new MagickImage(sourceImage.Content);
         magickImage.Format = MagickFormat.Avif;
+        magickImage.Quality = 65;
         
         magickImage.Resize(new MagickGeometry(320, 320)
         {
@@ -103,6 +127,24 @@ public class ImageStorage
         
         return new StorageFile(new MemoryStream(imageBytes), BackgroundThumbnailContentType);
     }
+    
+    public async Task<IReadOnlyCollection<StorageImage>> GetAllBackgroundThumbnails()
+    {
+        using var activity = Telemetry.ActivitySource.StartActivity();
+        
+        return (await _fileStorage.ListFilesAsync(BackgroundThumbnailPrefix))
+            .Select(key =>
+            {
+                var parts = key[BackgroundThumbnailPrefix.Length..].Split('/', 2);
+                return new StorageImage
+                {
+                    MapsetId = int.Parse(parts[0]),
+                    FileName = parts[1]
+                };
+            })
+            .ToArray();
+    }
+
 
     public async Task UploadSearchImageAsync(Guid searchId, string fileName, Stream stream)
     {
@@ -119,6 +161,7 @@ public class ImageStorage
         
         var image = new MagickImage(stream);
         image.Format = MagickFormat.Avif;
+        image.Quality = 65;
                 
         image.Resize(new MagickGeometry(160, 160)
         {
