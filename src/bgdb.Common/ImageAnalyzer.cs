@@ -56,7 +56,7 @@ public class ImageAnalyzer : IImageAnalyzer
             IgnoreAspectRatio = true
         });
 
-        var tensor = new DenseTensor<float>([1, 3, width, height]);
+        var tensor = new DenseTensor<float>([1, 3, height, width]);
 
         unsafe
         {

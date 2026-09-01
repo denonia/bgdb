@@ -48,7 +48,8 @@ public class IndexModel : PageModel
 
         await using var imageStream = ImageFile.OpenReadStream();
         
-        var searchId = await _imageSearchService.CreateSearchAsync(imageStream, GetRemoteIpAddress());
+        var searchId = await _imageSearchService.CreateSearchAsync(
+            imageStream, ImageFile.FileName, GetRemoteIpAddress());
 
         return RedirectToPage(null, null, new { searchid = searchId });
     }

@@ -1,10 +1,12 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using bgdb.Common;
 using bgdb.Common.Hashing;
 using bgdb.Common.Repositories;
 using bgdb.Common.Services;
+using bgdb.Common.Storages;
 using bgdb.Web.Middlewares;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.FileProviders;
 using Npgsql;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -32,11 +34,27 @@ public class Program
         
         builder.Services.AddSingleton<Worker>();
         
+        builder.Services.AddSingleton<IAmazonS3>(sp =>
+        {
+            var credentials = new BasicAWSCredentials(
+                Settings.S3AccessKey,
+                Settings.S3SecretKey);
+
+            var config = new AmazonS3Config
+            {
+                ServiceURL = Settings.S3ServiceUrl
+            };
+
+            return new AmazonS3Client(credentials, config);
+        });
+        
+        builder.Services.AddTransient<IFileStorage, S3FileStorage>();
+        builder.Services.AddTransient<ImageStorage>();
+        
         builder.Services.AddScoped<IDbSession, DbSession>();
         builder.Services.AddTransient<IImageRepository, ImageRepository>();
         builder.Services.AddTransient<ISearchRepository, SearchRepository>();
         
-        builder.Services.AddTransient<IImageConversionService, ImageConversionService>();
         builder.Services.AddTransient<IImageSearchService, ImageSearchService>();
         builder.Services.AddTransient<IStatsService, StatsService>();
         
@@ -93,14 +111,6 @@ public class Program
         app.UseHttpsRedirection();
         app.UseResponseCaching();
 
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(Settings.ImagePath),
-            RequestPath = "/img/raw",
-            ServeUnknownFileTypes = true
-        });
-        
-        app.UseCors(opt => opt.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
 
         app.UseRouting();
         

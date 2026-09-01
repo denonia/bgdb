@@ -1,7 +1,6 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using bgdb.Common.Repositories;
-using Microsoft.Extensions.Logging;
+using bgdb.Common.Storages;
 
 namespace bgdb.Common.Services;
 
@@ -10,37 +9,29 @@ public class ImageSearchService : IImageSearchService
     private readonly IImageAnalyzer _analyzer;
     private readonly IImageRepository _imageRepository;
     private readonly ISearchRepository _searchRepository;
-    private readonly IImageConversionService _conversionService;
-    private readonly ILogger<ImageSearchService> _logger;
+    private readonly ImageStorage _imageStorage;
 
-    public ImageSearchService(IImageAnalyzer analyzer, IImageRepository imageRepository,
+    public ImageSearchService(IImageAnalyzer analyzer, 
+        IImageRepository imageRepository,
         ISearchRepository searchRepository,
-        IImageConversionService conversionService, ILogger<ImageSearchService> logger)
+        ImageStorage imageStorage)
     {
         _analyzer = analyzer;
         _imageRepository = imageRepository;
         _searchRepository = searchRepository;
-        _conversionService = conversionService;
-        _logger = logger;
+        _imageStorage = imageStorage;
     }
 
-    public async Task<Guid> CreateSearchAsync(Stream stream, IPAddress requesterIp)
+    public async Task<Guid> CreateSearchAsync(Stream stream, string fileName, IPAddress requesterIp)
     {
         using var activity = Telemetry.ActivitySource.StartActivity();
         
         var searchId = Guid.NewGuid();
 
-        var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-
-        var genThumbnailTask = _conversionService.GenerateSearchThumbnailAsync(searchId.ToString(), ms.GetBuffer());
-        
-        await Task.WhenAll(genThumbnailTask, PerformSearchAsync(searchId, ms, requesterIp));
-
-        _ = Task.Run(async () =>
-        {
-            await _conversionService.ConvertSearchImageAsync(searchId.ToString(), ms.GetBuffer());
-        });
+        await Task.WhenAll(
+            _imageStorage.GenerateSearchThumbnailAsync(searchId, stream),
+            _imageStorage.UploadSearchImageAsync(searchId, fileName, stream),
+            PerformSearchAsync(searchId, stream, requesterIp));
 
         return searchId;
     }

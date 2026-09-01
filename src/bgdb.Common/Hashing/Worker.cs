@@ -1,6 +1,6 @@
 ﻿using bgdb.Common.Models;
 using bgdb.Common.Repositories;
-using ImageMagick;
+using bgdb.Common.Storages;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -9,12 +9,17 @@ namespace bgdb.Common.Hashing;
 public class Worker : IDisposable, IAsyncDisposable
 {
     private readonly IImageAnalyzer _analyzer;
+    private readonly ImageStorage _imageStorage;
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<Worker> _logger;
 
-    public Worker(IImageAnalyzer analyzer, NpgsqlDataSource dataSource, ILogger<Worker> logger)
+    public Worker(IImageAnalyzer analyzer, 
+        ImageStorage imageStorage,
+        NpgsqlDataSource dataSource, 
+        ILogger<Worker> logger)
     {
         _analyzer = analyzer;
+        _imageStorage = imageStorage;
         _dataSource = dataSource;
         _logger = logger;
     }
@@ -22,7 +27,7 @@ public class Worker : IDisposable, IAsyncDisposable
     public async Task RunAsync(CancellationToken ct = default)
     {
         await ProcessLocalMapsAsync();
-        await ConvertMissingBackgroundsAsync();
+        //await ConvertMissingBackgroundsAsync();
 
         while (!ct.IsCancellationRequested)
         {
@@ -158,23 +163,18 @@ public class Worker : IDisposable, IAsyncDisposable
 
     private async Task ConvertMissingBackgroundsAsync()
     {
-        _logger.LogInformation("Checking for missing backgrounds...");
-        
+        _logger.LogInformation("Checking for missing backgrounds in storage...");
+
         await using var conn = new DbSession(_dataSource);
         var imageRepository = new ImageRepository(conn);
         await conn.OpenAsync();
         await conn.EnsureCreatedAsync();
-        var imageRecords = await imageRepository.GetImageRecordsAsync();
-        var mapsetImgFileNames = imageRecords.Select(r => 
-            (r.MapsetId, Settings.GetImagePath(r.MapsetId, r.FileName))).ToList();
+
+        var mapsetsInDb = await imageRepository.GetCompletedMapsetsAsync();
+        var mapsetsInStorage = (await _imageStorage.GetAllBackgroundImages()).Select(x => x.MapsetId);
+        var remainingMapsets = mapsetsInDb.Except(mapsetsInStorage).ToArray();
         
-        var remainingMapsets = mapsetImgFileNames
-            .Where(mf => !File.Exists(mf.Item2))
-            .Select(mf => mf.MapsetId)
-            .Distinct()
-            .ToList();
-        
-        _logger.LogInformation("Converting backgrounds for {remainingMapsets} mapsets...", remainingMapsets.Count);
+        _logger.LogInformation("Converting backgrounds for {remainingMapsets} mapsets...", remainingMapsets.Length);
 
         var parallelOptions = new ParallelOptions
         {
@@ -227,14 +227,8 @@ public class Worker : IDisposable, IAsyncDisposable
 
         foreach (var bg in backgrounds)
         {
-            var resultPath = Settings.GetImagePath(mapsetId, bg.FileName);
-            
-            var image = new MagickImage(bg.Content);
-            image.Format = MagickFormat.Jxl;
-            image.Quality = 75;
-            await image.WriteAsync(resultPath);
-            
-            _logger.LogInformation("Converted background for {mapsetId} ({fileName})", mapsetId, bg.FileName);
+            await _imageStorage.UploadBackgroundImageAsync(mapsetId, bg.FileName, bg.Content);
+            _logger.LogInformation("Uploaded background for {mapsetId} ({fileName})", mapsetId, bg.FileName);
         }
     }
 
