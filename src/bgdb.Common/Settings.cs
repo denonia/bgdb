@@ -6,7 +6,7 @@ public static class Settings
 {
     static Settings()
     {
-        Env.Load();
+        Env.TraversePath().Load();
     }
     
     public static string BaseUrl => GetEnv("BASE_URL");
@@ -14,7 +14,6 @@ public static class Settings
     
     public static string KeysPath => GetEnv("KEYS_PATH");
     public static string LocalSongsPath => GetEnv("LOCAL_SONGS_PATH");
-    public static string SqlInitScriptPath => GetEnv("SQL_INIT_SCRIPT_PATH");
     
     public static string StorageKind => GetEnv("STORAGE_KIND");
     
@@ -31,10 +30,23 @@ public static class Settings
     public static string MirrorUrl => GetEnv("MIRROR_URL");
     public static string ConnectionString => GetEnv("CONNECTION_STRING");
 
+    public static bool ProcessLocalMaps => GetEnvOrDefault<bool>("PROCESS_LOCAL_MAPS");
+    public static bool FetchMissingBackgrounds => GetEnvOrDefault<bool>("FETCH_MISSING_BACKGROUNDS");
+    public static bool GenerateMissingThumbnails => GetEnvOrDefault<bool>("GENERATE_MISSING_THUMBNAILS");
+
     public const int ImageCacheDuration = 300;
     
     public static string GetLocalOszPath(int mapsetId) => Path.Combine(LocalSongsPath, $"{mapsetId}.osz");
 
     private static string GetEnv(string key) => Environment.GetEnvironmentVariable(key) 
                                                 ?? throw new InvalidOperationException($"{key} environment variable not set.");
+
+    private static T GetEnvOrDefault<T>(string key, T defaultValue = default(T))
+        where T : IParsable<T>
+    {
+        var env = Environment.GetEnvironmentVariable(key);
+        return env is null
+            ? defaultValue
+            : T.Parse(env, null);
+    }
 }

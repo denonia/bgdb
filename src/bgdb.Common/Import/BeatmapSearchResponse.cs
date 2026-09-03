@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace bgdb.Common.Hashing;
+namespace bgdb.Common.Import;
 
 public record BeatmapSearchResponse(
     [property: JsonPropertyName("beatmapsets")] IReadOnlyList<Beatmapset> Beatmapsets,

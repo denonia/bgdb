@@ -8,8 +8,7 @@
       "applicationUrl": "http://localhost:5165",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "workingDirectory": "../.."
+      }
     },
     "https": {
       "commandName": "Project",
@@ -18,8 +17,7 @@
       "applicationUrl": "https://localhost:7285;http://localhost:5165",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "workingDirectory": "../.."
+      }
     }
   }
 }

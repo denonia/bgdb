@@ -2,7 +2,7 @@
 using System.Text;
 using Coosu.Beatmap;
 
-namespace bgdb.Common.Hashing;
+namespace bgdb.Common.Import;
 
 public class BackgroundEntry
 {

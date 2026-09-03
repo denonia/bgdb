@@ -1,7 +1,7 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using bgdb.Common;
-using bgdb.Common.Hashing;
+using bgdb.Common.Import;
 using bgdb.Common.Repositories;
 using bgdb.Common.Services;
 using bgdb.Common.Storages;
@@ -33,7 +33,7 @@ public class Program
         builder.Services.AddSingleton(sp => 
             new ImageEmbedder(Settings.ModelPath, sp.GetRequiredService<ILogger<ImageEmbedder>>()));
         
-        builder.Services.AddSingleton<Worker>();
+        builder.Services.AddSingleton<ImportWorker>();
         
         var storageKind = Enum.Parse<StorageKind>(Settings.StorageKind);
         if (storageKind == StorageKind.S3)
@@ -134,7 +134,7 @@ public class Program
 
         app.MapControllers();
 
-        var worker = app.Services.GetRequiredService<Worker>();
+        var worker = app.Services.GetRequiredService<ImportWorker>();
         Task.Run(async () => await worker.RunAsync());
 
         app.Run();
