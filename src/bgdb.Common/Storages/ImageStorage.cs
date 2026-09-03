@@ -13,7 +13,7 @@ public class ImageStorage
     
     private const string BackgroundImageContentType = "image/jxl";
     private const string BackgroundThumbnailContentType = "image/avif";
-    private const string SearchThumbnailContentType = "image/avif";
+    private const string SearchThumbnailContentType = "image/webp";
     
     private readonly IFileStorage _fileStorage;
 
@@ -32,7 +32,7 @@ public class ImageStorage
         => $"{SearchImagePrefix}{searchId}/{fileName}";
     
     private string GetSearchThumbnailKey(Guid searchId) 
-         => $"{SearchThumbnailPrefix}{searchId}.avif";
+         => $"{SearchThumbnailPrefix}{searchId}.webp";
     
     public async Task UploadBackgroundImageAsync(int mapsetId, string fileName, byte[] content)
     {
@@ -154,8 +154,8 @@ public class ImageStorage
         using var activity = Telemetry.ActivitySource.StartActivity();
         
         using var image = new MagickImage(content);
-        image.Format = MagickFormat.Avif;
-        image.Quality = 65;
+        image.Format = MagickFormat.WebP;
+        image.Quality = 75;
                 
         image.Resize(new MagickGeometry(160, 160)
         {
