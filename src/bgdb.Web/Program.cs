@@ -30,8 +30,8 @@ public class Program
         var dataSource = dataSourceBuilder.Build();
         builder.Services.AddSingleton(dataSource);
         
-        var analyzer = new ImageEmbedder(Settings.ModelPath);
-        builder.Services.AddSingleton(analyzer);
+        builder.Services.AddSingleton(sp => 
+            new ImageEmbedder(Settings.ModelPath, sp.GetRequiredService<ILogger<ImageEmbedder>>()));
         
         builder.Services.AddSingleton<Worker>();
         
