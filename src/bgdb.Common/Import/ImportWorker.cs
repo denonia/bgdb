@@ -1,4 +1,6 @@
-﻿using bgdb.Common.Models;
+﻿using System.Net;
+using Amazon.Runtime;
+using bgdb.Common.Models;
 using bgdb.Common.Repositories;
 using bgdb.Common.Storages;
 using ICSharpCode.SharpZipLib.BZip2;
@@ -140,12 +142,20 @@ public class ImportWorker
 
         foreach (var mapsetId in mapsetsToProcess)
         {
+            retry:
             try
             {
                 await using var oszStream = await GetOszStreamAsync(mapsetId);
                 await using var oszFile = new OszFile(oszStream);
                 await ProcessMapsetAsync(mapsetId, oszFile);
                 await FetchMapsetBackgroundsAsync(mapsetId, oszFile);
+            }
+            catch (HttpRequestException e) when 
+                (e.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.Forbidden)
+            {
+                _logger.LogWarning("we've hit the rate limit. retrying in 2 minutes");
+                await Task.Delay(TimeSpan.FromMinutes(2));
+                goto retry;
             }
             catch (Exception e)
             {
