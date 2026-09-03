@@ -31,6 +31,7 @@ public static class Settings
     public static string ConnectionString => GetEnv("CONNECTION_STRING");
 
     public static bool ProcessLocalMaps => GetEnvOrDefault<bool>("PROCESS_LOCAL_MAPS");
+    public static bool VerifyFromOnlineDatabase => GetEnvOrDefault<bool>("VERIFY_FROM_ONLINE_DATABASE");
     public static bool FetchMissingBackgrounds => GetEnvOrDefault<bool>("FETCH_MISSING_BACKGROUNDS");
     public static bool GenerateMissingThumbnails => GetEnvOrDefault<bool>("GENERATE_MISSING_THUMBNAILS");
 

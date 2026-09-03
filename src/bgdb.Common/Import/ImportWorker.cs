@@ -1,12 +1,16 @@
 ﻿using bgdb.Common.Models;
 using bgdb.Common.Repositories;
 using bgdb.Common.Storages;
+using ICSharpCode.SharpZipLib.BZip2;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace bgdb.Common.Import;
 
 public class ImportWorker
 {
+    private const string OnlineDatabaseUrl = "https://assets.ppy.sh/client-resources/online.db.bz2";
+    
     private readonly ImageEmbedder _embedder;
     private readonly ImageStorage _imageStorage;
     private readonly ImageRepository _imageRepository;
@@ -27,6 +31,8 @@ public class ImportWorker
     {
         if (Settings.ProcessLocalMaps)
             await ProcessLocalMapsAsync();
+        if (Settings.VerifyFromOnlineDatabase)
+            await VerifyFromOnlineDatabaseAsync();
         if (Settings.FetchMissingBackgrounds)
             await FetchMissingBackgroundsAsync();
         if (Settings.GenerateMissingThumbnails)
@@ -98,6 +104,49 @@ public class ImportWorker
         });
     }
 
+    private async Task VerifyFromOnlineDatabaseAsync()
+    {
+        _logger.LogInformation("Fetching the online database...");
+        
+        var path = Path.GetTempFileName();
+        using (var httpClient = new HttpClient())
+        await using (var httpStream = await httpClient.GetStreamAsync(OnlineDatabaseUrl))
+        await using (var file = File.Create(path))
+        await using (var bz2 = new BZip2InputStream(httpStream))
+        {
+            await bz2.CopyToAsync(file);
+        }
+
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = path,
+            Mode = SqliteOpenMode.ReadOnly
+        }.ToString();
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+        
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM osu_beatmapsets";
+
+        var onlineMapsetIds = new List<int>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            onlineMapsetIds.Add(reader.GetInt32(0));
+        
+        var completedMapsetIds = await _imageRepository.GetCompletedMapsetsAsync();
+        var mapsetsToProcess = onlineMapsetIds.Except(completedMapsetIds).ToList();
+        
+        _logger.LogInformation("Found {mapsetsToProcess} mapsets from online database to process", mapsetsToProcess.Count);
+
+        foreach (var mapsetId in mapsetsToProcess)
+        {
+            await using var oszStream = await GetOszStreamAsync(mapsetId);
+            await using var oszFile = new OszFile(oszStream);
+            await ProcessMapsetAsync(mapsetId, oszFile);
+            await FetchMapsetBackgroundsAsync(mapsetId, oszFile);
+        }
+    }
+
     private async Task FetchMissingBackgroundsAsync()
     {
         _logger.LogInformation("Checking for missing backgrounds in storage...");
@@ -107,13 +156,13 @@ public class ImportWorker
         var remainingMapsets = mapsetsInDb.Except(mapsetsInStorage).ToArray();
         
         _logger.LogInformation("Fetching backgrounds for {remainingMapsets} mapsets...", remainingMapsets.Length);
-    
-        await Parallel.ForEachAsync(remainingMapsets, async (mapsetId, token) =>
+
+        foreach (var mapsetId in remainingMapsets)
         {
             await using var oszStream = await GetOszStreamAsync(mapsetId);
             await using var oszFile = new OszFile(oszStream);
             await FetchMapsetBackgroundsAsync(mapsetId, oszFile);
-        });
+        }
     }
 
     private async Task GenerateMissingThumbnailsAsync()
