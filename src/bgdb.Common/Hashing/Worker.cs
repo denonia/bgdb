@@ -133,6 +133,10 @@ public class Worker
             return;
         }
 
+        var meta = await oszFile.GetMetadataAsync();
+        var mapset = new Mapset(mapsetId, meta.Artist, meta.Title, meta.Creator);
+        await _imageRepository.InsertMapsetAsync(mapset);
+
         foreach (var bg in backgrounds)
         {
             using var ms = new MemoryStream();
@@ -144,10 +148,6 @@ public class Worker
              
             _logger.LogInformation("Processed {mapsetId}: {fileName}", mapsetId, bg.FileName);
         }
-
-        var meta = await oszFile.GetMetadataAsync();
-        var mapset = new Mapset(mapsetId, meta.Artist, meta.Title, meta.Creator);
-        await _imageRepository.InsertMapsetAsync(mapset);
     }
 
     private async Task ConvertMissingBackgroundsAsync()
