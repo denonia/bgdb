@@ -5,6 +5,7 @@ using bgdb.Common.Hashing;
 using bgdb.Common.Repositories;
 using bgdb.Common.Services;
 using bgdb.Common.Storages;
+using bgdb.Web.Endpoints;
 using bgdb.Web.Middlewares;
 using Microsoft.AspNetCore.DataProtection;
 using Npgsql;
@@ -123,6 +124,9 @@ public class Program
         app.UseMiddleware<AdminMiddleware>();
         
         app.UseAuthorization();
+
+        app.MapImageEndpoints();
+        app.MapSearchEndpoints();
 
         app.MapStaticAssets();
         app.MapRazorPages()

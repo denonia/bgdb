@@ -1,9 +1,8 @@
-using System.Net;
-using System.Net.Mime;
 using bgdb.Common;
 using bgdb.Common.Models;
 using bgdb.Common.Repositories;
 using bgdb.Common.Services;
+using bgdb.Web.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -50,17 +49,10 @@ public class IndexModel : PageModel
         using var ms = new MemoryStream();
         await ImageFile.CopyToAsync(ms);
         var imageBytes = ms.ToArray();
-        
+
         var searchId = await _imageSearchService.CreateSearchAsync(
-            imageBytes, ImageFile.FileName, GetRemoteIpAddress());
+            imageBytes, ImageFile.FileName, Request.GetRemoteIpAddress());
 
         return RedirectToPage(null, null, new { searchid = searchId });
-    }
-
-    private IPAddress GetRemoteIpAddress()
-    {
-        var forwardedHeader = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        var ipStr = forwardedHeader?.Split(',').FirstOrDefault()?.Trim();
-        return (ipStr is null ? HttpContext.Connection.RemoteIpAddress : IPAddress.Parse(ipStr))!;
     }
 }
