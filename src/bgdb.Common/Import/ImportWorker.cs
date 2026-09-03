@@ -140,10 +140,17 @@ public class ImportWorker
 
         foreach (var mapsetId in mapsetsToProcess)
         {
-            await using var oszStream = await GetOszStreamAsync(mapsetId);
-            await using var oszFile = new OszFile(oszStream);
-            await ProcessMapsetAsync(mapsetId, oszFile);
-            await FetchMapsetBackgroundsAsync(mapsetId, oszFile);
+            try
+            {
+                await using var oszStream = await GetOszStreamAsync(mapsetId);
+                await using var oszFile = new OszFile(oszStream);
+                await ProcessMapsetAsync(mapsetId, oszFile);
+                await FetchMapsetBackgroundsAsync(mapsetId, oszFile);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("failed to process mapset {mapsetId}: {exception}", mapsetId, e.ToString());
+            }
         }
     }
 
